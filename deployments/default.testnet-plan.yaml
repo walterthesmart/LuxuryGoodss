@@ -1,0 +1,32 @@
+---
+id: 0
+name: Testnet deployment
+network: testnet
+stacks-node: "https://api.nakamoto.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: LuxurryNFt
+            expected-sender: ST31AT1T96E4CF8C2QZ7FCFC99WJCTV2GTTN3ZQKB
+            cost: 8012000
+            path: "contracts\\LuxurryNFt.clar"
+            anchor-block-only: true
+            clarity-version: 2
+        - contract-publish:
+            contract-name: nftApprovable-trait
+            expected-sender: ST31AT1T96E4CF8C2QZ7FCFC99WJCTV2GTTN3ZQKB
+            cost: 693000
+            path: "contracts\\nftApprovable-trait.clar"
+            anchor-block-only: true
+            clarity-version: 2
+        - contract-publish:
+            contract-name: nftTrait
+            expected-sender: ST31AT1T96E4CF8C2QZ7FCFC99WJCTV2GTTN3ZQKB
+            cost: 468000
+            path: "contracts\\nftTrait.clar"
+            anchor-block-only: true
+            clarity-version: 2
+      epoch: "2.5"

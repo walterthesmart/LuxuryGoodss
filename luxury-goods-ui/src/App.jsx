@@ -1,48 +1,52 @@
 import { AppConfig, showConnect, UserSession } from "@stacks/connect";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-
-
+const appConfig = new AppConfig(["store_write", "publish_data"]);
+const userSession = new UserSession({ appConfig });
 
 function App() {
-  const appConfig = new AppConfig(["store_write", "publish_data"]);
-  const userSession = new UserSession({ appConfig });
-  const [userAddress, setUserAddress] = useState(function () {
+  const [userAddress, setUserAddress] = useState(() => {
     return JSON.parse(sessionStorage.getItem("userAddress"));
   });
 
+  useEffect(() => {
+    if (userSession.isUserSignedIn()) {
+      const {
+        profile: {
+          stxAddress: { testnet },
+        },
+      } = userSession.loadUserData();
+      setUserAddress(testnet);
+    }
+  }, []);
 
-  
-  function handleSubmit() {
+  const handleConnectWallet = () => {
     showConnect({
       appDetails: {
         name: "My App",
         icon: "",
       },
-      onFinish: function () {
-        let {
+      onFinish: () => {
+        const {
           profile: {
             stxAddress: { testnet },
           },
         } = userSession.loadUserData();
 
-        console.log(userSession.loadUserData());
-
         setUserAddress(testnet);
-        sessionStorage.clear();
         sessionStorage.setItem("userAddress", JSON.stringify(testnet));
       },
       userSession,
     });
-  }
+  };
 
   return (
     <main>
-      <nav className="bg-yellow-800 py-[2rem] p-[4rem] flex items-center justify-between">
-        <h1 className="text-white text-[2rem]">Luxury Goods UI</h1>
+      <nav className="bg-yellow-800 py-8 px-16 flex items-center justify-between">
+        <h1 className="text-white text-2xl">Luxury Goods UI</h1>
         <button
-          className="bg-black px-[2rem] py-[.5rem] text-white text-[1.6rem] rounded-[.5rem]"
-          onClick={handleSubmit}
+          className="bg-black px-8 py-2 text-white text-xl rounded-md"
+          onClick={handleConnectWallet}
         >
           {!userAddress ? "Connect Wallet" : "Wallet Connected"}
         </button>

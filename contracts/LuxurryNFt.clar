@@ -1,4 +1,5 @@
 ;; title: LuxuryNFT
+
 ;; version: 0.1.0
 ;; summary: An NFT contract for luxury items that can be minted on purchase of a luxury item
 ;; description: This NFT will act as a Loyalty signature for our customers who purchase luxury items. The NFT will be minted on the purchase of a luxury item and will be used to claim rewards and discounts on future purchases.

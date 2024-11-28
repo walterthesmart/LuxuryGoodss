@@ -2,29 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { AppConfig, showConnect, UserSession } from '@stacks/connect'
-import { Moon, Sun, ShoppingCart, User, Home, Image } from 'lucide-react'
+import { Moon, Sun, ShoppingCart, User, Home, Image, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
+import { products, nfts } from './data/products'
+import { useShoppingCart } from './hooks/useShoppingCart'
+import { ShoppingCart } from './components/ShoppingCart'
 
 const appConfig = new AppConfig(['store_write', 'publish_data'])
 const userSession = new UserSession({ appConfig })
-
-// Mock data for products and NFTs
-const products = [
-  { id: 1, name: 'Luxury Watch', price: 5000, image: '/placeholder.svg?height=200&width=200' },
-  { id: 2, name: 'Designer Handbag', price: 3000, image: '/placeholder.svg?height=200&width=200' },
-  { id: 3, name: 'Premium Sunglasses', price: 500, image: '/placeholder.svg?height=200&width=200' },
-]
-
-const nfts = [
-  { id: 1, name: 'Luxury Watch NFT', image: '/placeholder.svg?height=100&width=100' },
-  { id: 2, name: 'Designer Handbag NFT', image: '/placeholder.svg?height=100&width=100' },
-  { id: 3, name: 'Premium Sunglasses NFT', image: '/placeholder.svg?height=100&width=100' },
-]
 
 export default function LuxuryGoodsApp() {
   const [userAddress, setUserAddress] = useState(() => {
@@ -35,8 +25,9 @@ export default function LuxuryGoodsApp() {
   })
   const [darkMode, setDarkMode] = useState(false)
   const [activeTab, setActiveTab] = useState('home')
-  const [cart, setCart] = useState([])
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useShoppingCart()
 
   useEffect(() => {
     if (userSession.isUserSignedIn()) {
@@ -77,19 +68,15 @@ export default function LuxuryGoodsApp() {
     })
   }
 
-  const addToCart = (product) => {
-    setCart([...cart, product])
-  }
-
-  const removeFromCart = (productId) => {
-    setCart(cart.filter((item) => item.id !== productId))
-  }
-
   const handlePurchase = () => {
     // Here you would integrate with your smart contract to process the purchase and mint NFTs
     setShowPurchaseModal(true)
-    setCart([])
+    clearCart()
   }
+
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className={`min-h-screen ${darkMode ? 'dark' : ''}`}>
@@ -129,8 +116,17 @@ export default function LuxuryGoodsApp() {
           {activeTab === 'home' && (
             <div>
               <h2 className="text-2xl font-bold mb-4 dark:text-white">Featured Products</h2>
+              <div className="mb-4">
+                <Input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-md"
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <Card key={product.id}>
                     <CardHeader>
                       <CardTitle>{product.name}</CardTitle>
@@ -188,26 +184,13 @@ export default function LuxuryGoodsApp() {
             </Button>
           </div>
 
-          <div className="mt-8">
-            <h3 className="text-lg font-bold mb-2 dark:text-white">Shopping Cart</h3>
-            {cart.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">Your cart is empty</p>
-            ) : (
-              <div>
-                {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center mb-2">
-                    <span className="dark:text-white">{item.name}</span>
-                    <Button variant="destructive" size="sm" onClick={() => removeFromCart(item.id)}>
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-                <Button className="w-full mt-4" onClick={handlePurchase}>
-                  Purchase
-                </Button>
-              </div>
-            )}
-          </div>
+          <ShoppingCart
+            cart={cart}
+            removeFromCart={removeFromCart}
+            updateQuantity={updateQuantity}
+            getTotalPrice={getTotalPrice}
+            onPurchase={handlePurchase}
+          />
         </aside>
       </div>
 
@@ -228,3 +211,4 @@ export default function LuxuryGoodsApp() {
     </div>
   )
 }
+

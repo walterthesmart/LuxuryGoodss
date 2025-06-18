@@ -9,7 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.1.2",
+    "@stacks/auth": "^6.17.0",
+    "@stacks/connect": "^7.10.2",
+    "@stacks/network": "^6.17.0",
+    "@stacks/transactions": "^6.17.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.4.7",

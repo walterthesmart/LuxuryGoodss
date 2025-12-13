@@ -71,54 +71,99 @@ describe("LuxuryNFT Contract - Clarity 4", () => {
         console.log("Set key result:", setKeyRes.result);
         expect(setKeyRes.result).toBeOk(boolCV(true));
 
-        // Use captured final hash from contract debug output as manual construction is inconsistent
-        // Contract Hash: 0x94897e6a1b3b1cb3746ae9e123789ecae6c45e0fdf7aca46117c0b5c46fe1305
-        const msgHash = hexToBytes("94897e6a1b3b1cb3746ae9e123789ecae6c45e0fdf7aca46117c0b5c46fe1305");
-
-        console.log("Signing...");
-        // @ts-ignore
-        const signatureResult = sign(msgHash, privateKey, { recovered: true });
-        let sigBytes: Uint8Array;
-        let recovery = 0;
-
-        if (Array.isArray(signatureResult)) {
-          // v1.7
-          sigBytes = signatureResult[0];
-          recovery = signatureResult[1];
-        } else if (signatureResult instanceof Uint8Array) {
-          // v2.0 or simple return
-          sigBytes = signatureResult;
-          // Calculate recovery ID
-          for (let rec = 0; rec < 4; rec++) {
-            try {
-              // @ts-ignore
-              const recoveredPub = recoverPublicKey(msgHash, sigBytes, rec, true);
-              if (recoveredPub.toString() === publicKey.toString()) {
-                recovery = rec;
-                break;
-              }
-            } catch (e) { continue; }
-          }
+        // Get the exact message hash from the contract to ensure consistent signing
+        const claimHashRes = simnet.callReadOnlyFn(
+          "LuxuryNFT",
+          "get-claim-hash",
+          [uintCV(1), uintCV(100), uintCV(10), standardPrincipalCV(wallet1)],
+          deployer
+        );
+        console.log('Claim hash read-only result: ', claimHashRes);
+        // The claim hash returned by the simnet can be a Buffer or Uint8Array depending on environment
+        let msgHash: Uint8Array;
+  const claimVal: any = (claimHashRes.result && claimHashRes.result.value) || claimHashRes.result || claimHashRes;
+        if (typeof claimVal === "string") {
+          msgHash = hexToBytes(claimVal);
+        } else if (claimVal && typeof claimVal === 'object' && claimVal.type === 'buffer' && typeof claimVal.value === 'string') {
+          msgHash = hexToBytes(claimVal.value);
+        } else if (claimVal instanceof Uint8Array || Buffer.isBuffer(claimVal)) {
+          msgHash = new Uint8Array(claimVal);
         } else {
-          // Object return (rare)
-          sigBytes = (signatureResult as any).der || (signatureResult as any).compact || signatureResult;
-          recovery = (signatureResult as any).recovery || 0;
+          throw new Error("Unexpected claim hash type: " + typeof claimVal);
         }
 
-        const signatureBuffer = new Uint8Array(65);
-        if (sigBytes instanceof Uint8Array) {
-          signatureBuffer.set(sigBytes);
+        console.log("Signing...");
+        // Use the secp256k1 library explicitly to get a consistent compact signature
+  const secp = await import("@noble/secp256k1");
+  const privateKeyHex = Buffer.from(privateKey).toString('hex');
+  console.log('Private key hex:', privateKeyHex);
+  console.log('MsgHash hex:', Buffer.from(msgHash).toString('hex'));
+  // Request compact signature (r||s, 64 bytes) instead of DER
+  const sigBytes = await secp.sign(msgHash, privateKeyHex, { der: false });
+        // Normalize signature and compute recovery index using compactSig
+        let recovery = 0;
+
+  const signatureBuffer = new Uint8Array(65);
+        // Normalize signature to Uint8Array
+        let rawSigBytes: Uint8Array;
+        if (typeof sigBytes === 'string') {
+          rawSigBytes = hexToBytes(sigBytes);
+        } else if (Buffer.isBuffer(sigBytes)) {
+          rawSigBytes = new Uint8Array(sigBytes);
+        } else if (sigBytes instanceof Uint8Array) {
+          rawSigBytes = sigBytes;
         } else {
-          signatureBuffer.set(Uint8Array.from(Object.values(sigBytes)));
+          rawSigBytes = Uint8Array.from(Object.values(sigBytes));
+        }
+  console.log('rawSigBytes length:', rawSigBytes.length, 'type:', typeof rawSigBytes, 'contents:', rawSigBytes);
+        let compactSig: Uint8Array;
+        // If der-encoded (starts with 0x30), convert to compact (r||s 64 bytes)
+        if (rawSigBytes[0] === 0x30) {
+          // Simple DER parser (assumes typical format)
+          let idx = 2; // skip 0x30 <len>
+          if (rawSigBytes[idx] !== 0x02) throw new Error('Invalid DER: missing INTEGER marker for r');
+          const rLen = rawSigBytes[idx + 1];
+          let rStart = idx + 2;
+          const r = rawSigBytes.slice(rStart, rStart + rLen);
+          idx = rStart + rLen;
+          if (rawSigBytes[idx] !== 0x02) throw new Error('Invalid DER: missing INTEGER marker for s');
+          const sLen = rawSigBytes[idx + 1];
+          let sStart = idx + 2;
+          const s = rawSigBytes.slice(sStart, sStart + sLen);
+          // pad or trim to 32 bytes
+          const rPadded = new Uint8Array(32);
+          const sPadded = new Uint8Array(32);
+          rPadded.set(r.slice(Math.max(0, r.length - 32)));
+          sPadded.set(s.slice(Math.max(0, s.length - 32)));
+          compactSig = new Uint8Array(64);
+          compactSig.set(rPadded, 0);
+          compactSig.set(sPadded, 32);
+        } else {
+          compactSig = rawSigBytes.slice(0, 64);
+        }
+  console.log('compactSig length', compactSig.length);
+        signatureBuffer.set(compactSig);
+        // Recompute the recovery id after compacting signature
+        recovery = 0;
+        for (let rec = 0; rec < 4; rec++) {
+          try {
+            const recoveredPub = secp.recoverPublicKey(msgHash, compactSig, rec, true);
+            if (Buffer.from(recoveredPub).toString('hex') === Buffer.from(publicKey).toString('hex')) {
+              recovery = rec;
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
         }
         signatureBuffer[64] = recovery;
 
-        console.log("Signature Recovery ID:", recovery);
+  console.log("Signature Recovery ID:", recovery);
+  console.log("Final signatureBuffer:", Buffer.from(signatureBuffer).toString('hex'));
 
-        // Verify locally
-        const secp = await import("@noble/secp256k1");
-        // @ts-ignore
-        const isSigValid = secp.verify(signatureBuffer.slice(0, 64), msgHash, publicKey);
+  // Verify locally using the previously imported secp
+  // @ts-ignore
+  const isSigValid = secp.verify(signatureBuffer.slice(0, 64), msgHash, publicKey);
         console.log("Local Signature Verification Result:", isSigValid);
 
         console.log("Calling claim...");
@@ -306,8 +351,9 @@ describe("LuxuryNFT Contract - Clarity 4", () => {
       expect(result).toBeOk(Cl.bool(true));
 
       // Verify NFT no longer exists
-      const owner = simnet.callReadOnlyFn("LuxuryNFT", "get-token-owner", [Cl.uint(1)], deployer);
-      expect(owner.result).toBeErr(Cl.uint(108)); // ERR-TOKEN-NOT-FOUND
+  const owner = simnet.callReadOnlyFn("LuxuryNFT", "get-token-owner", [Cl.uint(1)], deployer);
+  console.log("get-token-owner result:", owner);
+  expect(owner.result).toBeErr(Cl.uint(108)); // ERR-TOKEN-NOT-FOUND
     });
 
     it("should prevent non-owner from burning NFT", () => {

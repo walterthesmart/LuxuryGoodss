@@ -1,0 +1,83 @@
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.0[39m [90mC:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss[39m
+
+[90mstdout[2m | tests/LuxuryNFT.test.ts[2m > [22m[2mLuxuryNFT Contract - Clarity 4[2m > [22m[2mNFT Claiming[2m > [22m[2mshould allow claiming an NFT with valid parameters[22m[39m
+Generating key...
+Public Key Hex: 02bb50e2d89a4ed70663d080659fe0ad4b9bc3e06c17a227433966cb59ceee020d
+PubKey CV: {"type":"buffer","value":"02bb50e2d89a4ed70663d080659fe0ad4b9bc3e06c17a227433966cb59ceee020d"}
+Setting signer key...
+{ event: "signer-key-updated", new-key: 0x02bb50e2d89a4ed70663d080659fe0ad4b9bc3e06c17a227433966cb59ceee020d } (LuxuryNFT:248)
+Set key result: { type: [32m'ok'[39m, value: { type: [32m'true'[39m } }
+Deployer: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+Wallet1: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5
+MsgHash: 9a748c29186f903c2cb49462c5c8465ba02eff5f01722f607722f23ad7b2c0d3
+Signing...
+Signature Recovery ID: [33m0[39m
+Local Signature Verification Result: [33mfalse[39m
+Calling claim...
+{ event: "debug-final-hash", val: 0x94897e6a1b3b1cb3746ae9e123789ecae6c45e0fdf7aca46117c0b5c46fe1305 } (LuxuryNFT:168)
+Claim result: { type: [32m'err'[39m, value: { type: [32m'uint'[39m, value: [33m102n[39m } }
+├── ( check-under-cap cid cap )  LuxuryNFT:167:15
+│   │ ↳ args: u1 u10
+│   ├── ( get-campaign-minted-count cid )  LuxuryNFT:86:8
+│   │   │ ↳ args: u1
+│   │   └── u0
+│   └── true
+├── ( generate-claim-hash cid verify-id cap recipient )  LuxuryNFT:168:46
+│   │ ↳ args: u1 u100 u10 ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5
+│   └── 0x94897e6a1b3b1cb3746ae9e123789ecae6c45e0fdf7aca46117c0b5c46fe1305
+│ ✸ print event: (tuple (event "debug-final-hash") (val 0x94897e6a1b3b1cb3746ae9e123789ecae6c45e0fdf7aca46117c0b5c46fe1305))
+├── ( verify-signature cid verify-id cap recipient signature )  LuxuryNFT:172:15
+│   │ ↳ args: u1 u100 u10 ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5 0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+│   ├── ( generate-claim-hash cid verify-id cap owner )  LuxuryNFT:117:21
+│   │   │ ↳ args: u1 u100 u10 ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5
+│   │   └── 0x94897e6a1b3b1cb3746ae9e123789ecae6c45e0fdf7aca46117c0b5c46fe1305
+│   └── false
+└── (err u102)
+
+[90mstderr[2m | tests/LuxuryNFT.test.ts[2m > [22m[2mLuxuryNFT Contract - Clarity 4[2m > [22m[2mNFT Claiming[2m > [22m[2mshould allow claiming an NFT with valid parameters[22m[39m
+TEST FAILED WITH ERROR: JestExtendError: actual value must be a Clarity "ResponseOk", received "ResponseErr" (err u102)
+    at Proxy.expectWrapper [90m(file:///C:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss/[39mnode_modules/[4m@vitest[24m/expect/dist/index.js:1584:17[90m)[39m
+    at Proxy.<anonymous> [90m(file:///C:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss/[39mnode_modules/[4m@vitest[24m/expect/dist/index.js:800:17[90m)[39m
+    at Proxy.methodWrapper [90m(C:\Users\HomePC\Desktop\Blockchain\LuxuryGoodss\[39mnode_modules\[4mchai[24m\lib\chai\utils\addMethod.js:57:25[90m)[39m
+    at [90mC:\Users\HomePC\Desktop\Blockchain\LuxuryGoodss\[39mtests\LuxuryNFT.test.ts:149:24
+[90m    at processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at runTest [90m(file:///C:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:781:11[90m)[39m
+    at runSuite [90m(file:///C:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:909:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:909:15[90m)[39m
+    at runSuite [90m(file:///C:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:909:15[90m)[39m
+    at runFiles [90m(file:///C:/Users/HomePC/Desktop/Blockchain/LuxuryGoodss/[39mnode_modules/[4m@vitest[24m/runner/dist/index.js:958:5[90m)[39m {
+  actual: [32m'ResponseErr'[39m,
+  expected: [32m'ResponseOk'[39m
+}
+
+ [33m❯[39m tests/LuxuryNFT.test.ts [2m ([22m[2m18 tests[22m [2m|[22m [31m1 failed[39m [2m|[22m [33m17 skipped[39m[2m)[22m[33m 308[2mms[22m[39m
+[31m   [33m❯[31m tests/LuxuryNFT.test.ts[2m > [22mLuxuryNFT Contract - Clarity 4[2m > [22mNFT Claiming[2m > [22mshould allow claiming an NFT with valid parameters[39m
+[31m     → actual value must be a Clarity "ResponseOk", received "ResponseErr" (err u102)[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[1m[7m Failed Tests 1 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[31m[1m[7m FAIL [27m[22m[39m tests/LuxuryNFT.test.ts[2m > [22mLuxuryNFT Contract - Clarity 4[2m > [22mNFT Claiming[2m > [22mshould allow claiming an NFT with valid parameters
+[31m[1mError[22m: actual value must be a Clarity "ResponseOk", received "ResponseErr" (err u102)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- ResponseOk[39m
+[31m+ ResponseErr[39m
+
+[36m [2m❯[22m tests/LuxuryNFT.test.ts:[2m149:24[22m[39m
+    [90m147| [39m        )[33m;[39m
+    [90m148| [39m        console[33m.[39m[34mlog[39m([32m"Claim result:"[39m[33m,[39m result)[33m;[39m
+    [90m149| [39m        [34mexpect[39m(result)[33m.[39m[34mtoBeOk[39m([34muintCV[39m([34m1[39m))[33m;[39m
+    [90m   | [39m                       [31m^[39m
+    [90m150| [39m
+    [90m151| [39m        [90m// Verify token count increased[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[33m17 skipped[39m[90m (18)[39m
+[2m   Start at [22m 23:11:02
+[2m   Duration [22m 8.27s[2m (transform 176ms, setup 215ms, collect 79ms, tests 308ms, environment 6.67s, prepare 541ms)[22m
+

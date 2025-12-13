@@ -1,15 +1,14 @@
 ;; title: LuxuryNFT
-;; version: 0.2.0
+;; version: 1.0.0
 ;; summary: An NFT contract for luxury items that can be minted on purchase of a luxury item
 ;; description: This NFT acts as a Loyalty signature for customers who purchase luxury items,
-;; enabling rewards and discounts on future purchases.
+;; enabling rewards and discounts on future purchases. Upgraded to Clarity 4.
 
 (define-non-fungible-token luxurynfts uint)
 
 ;; Constants
 (define-constant CONTRACT-NAME "LuxuryNFT")
 (define-constant CONTRACT-SYMBOL "LUXE")
-(define-constant BASE-URI "")
 (define-constant EMPTY-BUFFER 0x000000000000000000000000000000000000000000000000000000000000000000)
 
 ;; Error codes
@@ -22,12 +21,14 @@
 (define-constant ERR-INVALID-ADDRESS (err u106))
 (define-constant ERR-NOT-APPROVED (err u107))
 (define-constant ERR-TOKEN-NOT-FOUND (err u108))
+(define-constant ERR-CANNOT-BURN (err u109))
 
 ;; State Variables
 (define-data-var contract-owner principal tx-sender)
 (define-data-var signer-public-key (buff 33) EMPTY-BUFFER)
 (define-data-var last-token-id uint u0)
 (define-data-var transferrable bool true)
+(define-data-var base-uri (string-ascii 256) "")
 
 ;; Maps
 (define-map nft-approvals uint principal)
@@ -68,15 +69,12 @@
       (concat 
         (concat 
           (concat 
-            (concat 
-              (sha256 chain-id)
-              (as-contract tx-sender)
-            )
-            (sha256 cid) 
+            (sha256 chain-id)
+            (unwrap-panic (to-consensus-buff? contract-caller))
           )
-          (sha256 verify-id)
+          (unwrap-panic (to-consensus-buff? cid))
         )
-        (sha256 cap)
+        (unwrap-panic (to-consensus-buff? verify-id))
       ) 
       (unwrap-panic (to-consensus-buff? owner))
     )
@@ -92,7 +90,7 @@
 )
 
 (define-private (generate-token-uri (token-id uint)) 
-  (concat BASE-URI (concat (int-to-ascii token-id) ".json"))
+  (concat (var-get base-uri) (concat (int-to-ascii token-id) ".json"))
 )
 
 ;; Public Functions
@@ -144,6 +142,21 @@
   )
 )
 
+;; New Feature: Burn function to destroy tokens
+(define-public (burn (token-id uint))
+  (begin
+    (asserts! (validate-ownership token-id tx-sender) ERR-NOT-TOKEN-OWNER)
+    (map-delete nft-approvals token-id)
+    (match (nft-burn? luxurynfts token-id tx-sender)
+      success (begin
+        (print {event: "nft-burned", token: token-id, burner: tx-sender})
+        (ok true)
+      )
+      error ERR-CANNOT-BURN
+    )
+  )
+)
+
 ;; Admin Functions
 (define-public (set-transferrable (new-state bool)) 
   (begin 
@@ -170,6 +183,16 @@
     (asserts! (not (is-eq new-key EMPTY-BUFFER)) ERR-INVALID-SIGNER-KEY)
     (var-set signer-public-key new-key)
     (print {event: "signer-key-updated", new-key: new-key})
+    (ok true)
+  )
+)
+
+;; New Feature: Set base URI for token metadata
+(define-public (set-base-uri (new-uri (string-ascii 256)))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-OWNER-ONLY)
+    (var-set base-uri new-uri)
+    (print {event: "base-uri-updated", new-uri: new-uri})
     (ok true)
   )
 )
@@ -228,5 +251,9 @@
 )
 
 (define-read-only (get-contract-address) 
-  (ok (as-contract tx-sender))
+  (ok contract-caller)
+)
+
+(define-read-only (get-base-uri)
+  (ok (var-get base-uri))
 )

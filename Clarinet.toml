@@ -5,20 +5,20 @@ authors = []
 telemetry = true
 cache_dir = '.cache'
 requirements = []
-[contracts.LuxurryNFt]
-path = 'contracts/LuxurryNFt.clar'
-clarity_version = 2
-epoch = 2.5
+[contracts.LuxuryNFT]
+path = 'contracts/LuxuryNFT.clar'
+clarity_version = 4
+epoch = 3.3
 
 [contracts.nftApprovable-trait]
 path = 'contracts/nftApprovable-trait.clar'
-clarity_version = 2
-epoch = 2.5
+clarity_version = 4
+epoch = 3.3
 
 [contracts.nftTrait]
 path = 'contracts/nftTrait.clar'
-clarity_version = 2
-epoch = 2.5
+clarity_version = 4
+epoch = 3.3
 [repl.analysis]
 passes = ['check_checker']
 

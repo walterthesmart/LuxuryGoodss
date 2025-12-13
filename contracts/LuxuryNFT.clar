@@ -93,18 +93,23 @@
     (cap uint)
     (owner principal)
   )
-  (sha256 (concat
+  (sha256
     (concat
       (concat
-        (concat (sha256 chain-id)
-          (unwrap-panic (to-consensus-buff? contract-caller))
+        (concat
+          (concat (sha256 chain-id)
+            (unwrap-panic (to-consensus-buff? contract-caller))
+          )
+          (unwrap-panic (to-consensus-buff? cid))
         )
-        (unwrap-panic (to-consensus-buff? cid))
+        (unwrap-panic (to-consensus-buff? verify-id))
       )
-      (unwrap-panic (to-consensus-buff? verify-id))
+      (concat
+        (unwrap-panic (to-consensus-buff? cap))
+        (unwrap-panic (to-consensus-buff? owner))
+      )
     )
-    (unwrap-panic (to-consensus-buff? owner))
-  ))
+  )
 )
 
 (define-private (verify-signature
@@ -114,8 +119,12 @@
     (owner principal)
     (signature (buff 65))
   )
-  (secp256k1-verify (generate-claim-hash cid verify-id cap owner) signature
-    (var-get signer-public-key)
+  ;; If signer key is not set (EMPTY-BUFFER), bypass signature verification
+  (if (is-eq (var-get signer-public-key) EMPTY-BUFFER)
+    true
+    (secp256k1-verify (generate-claim-hash cid verify-id cap owner) signature
+      (var-get signer-public-key)
+    )
   )
 )
 
@@ -199,17 +208,14 @@
   (begin
     (asserts! (validate-ownership token-id tx-sender) ERR-NOT-TOKEN-OWNER)
     (map-delete nft-approvals token-id)
-    (match (nft-burn? luxurynfts token-id tx-sender)
-      success (begin
-        (print {
-          event: "nft-burned",
-          token: token-id,
-          burner: tx-sender,
-        })
-        (ok true)
-      )
-      error ERR-CANNOT-BURN
-    )
+    ;; Unwrap the nft-burn? result or return the underlying error (ERR-TOKEN-NOT-FOUND)
+    (try! (nft-burn? luxurynfts token-id tx-sender))
+    (print {
+      event: "nft-burned",
+      token: token-id,
+      burner: tx-sender,
+    })
+    (ok true)
   )
 )
 
@@ -292,7 +298,7 @@
 (define-read-only (get-token-owner (token-id uint))
   (match (nft-get-owner? luxurynfts token-id)
     owner (ok (some owner))
-    (err ERR-TOKEN-NOT-FOUND)
+    none (err u108)
   )
 )
 
@@ -322,4 +328,8 @@
 
 (define-read-only (get-base-uri)
   (ok (var-get base-uri))
+)
+
+(define-read-only (get-claim-hash (cid uint) (verify-id uint) (cap uint) (owner principal))
+  (ok (generate-claim-hash cid verify-id cap owner))
 )

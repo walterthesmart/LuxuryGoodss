@@ -31,22 +31,43 @@
 (define-data-var base-uri (string-ascii 256) "")
 
 ;; Maps
-(define-map nft-approvals uint principal)
-(define-map minted-verify-ids uint bool)
-(define-map campaign-minted uint uint)
-(define-map nft-cids uint uint)
+(define-map nft-approvals
+  uint
+  principal
+)
+(define-map minted-verify-ids
+  uint
+  bool
+)
+(define-map campaign-minted
+  uint
+  uint
+)
+(define-map nft-cids
+  uint
+  uint
+)
 
 ;; Private Functions
-(define-private (validate-ownership (token-id uint) (user principal))
+(define-private (validate-ownership
+    (token-id uint)
+    (user principal)
+  )
   (is-eq user (unwrap! (nft-get-owner? luxurynfts token-id) false))
 )
 
-(define-private (validate-approval (token-id uint) (user principal))
+(define-private (validate-approval
+    (token-id uint)
+    (user principal)
+  )
   (is-eq user (unwrap! (map-get? nft-approvals token-id) false))
 )
 
-(define-private (validate-ownership-or-approval (token-id uint) (user principal))
-  (or 
+(define-private (validate-ownership-or-approval
+    (token-id uint)
+    (user principal)
+  )
+  (or
     (validate-ownership token-id user)
     (validate-approval token-id user)
   )
@@ -56,71 +77,102 @@
   (default-to u0 (map-get? campaign-minted cid))
 )
 
-(define-private (check-under-cap (cid uint) (cap uint)) 
-  (or 
+(define-private (check-under-cap
+    (cid uint)
+    (cap uint)
+  )
+  (or
     (is-eq cap u0)
     (< (get-campaign-minted-count cid) cap)
   )
 )
 
-(define-private (generate-claim-hash (cid uint) (verify-id uint) (cap uint) (owner principal)) 
-  (sha256
-    (concat 
-      (concat 
-        (concat 
-          (concat 
-            (sha256 chain-id)
-            (unwrap-panic (to-consensus-buff? contract-caller))
-          )
-          (unwrap-panic (to-consensus-buff? cid))
-        )
-        (unwrap-panic (to-consensus-buff? verify-id))
-      ) 
-      (unwrap-panic (to-consensus-buff? owner))
-    )
+(define-private (generate-claim-hash
+    (cid uint)
+    (verify-id uint)
+    (cap uint)
+    (owner principal)
   )
+  (sha256 (concat
+    (concat
+      (concat
+        (concat (sha256 chain-id)
+          (unwrap-panic (to-consensus-buff? contract-caller))
+        )
+        (unwrap-panic (to-consensus-buff? cid))
+      )
+      (unwrap-panic (to-consensus-buff? verify-id))
+    )
+    (unwrap-panic (to-consensus-buff? owner))
+  ))
 )
 
-(define-private (verify-signature (cid uint) (verify-id uint) (cap uint) (owner principal) (signature (buff 65))) 
-  (secp256k1-verify 
-    (generate-claim-hash cid verify-id cap owner)
-    signature 
+(define-private (verify-signature
+    (cid uint)
+    (verify-id uint)
+    (cap uint)
+    (owner principal)
+    (signature (buff 65))
+  )
+  (secp256k1-verify (generate-claim-hash cid verify-id cap owner) signature
     (var-get signer-public-key)
   )
 )
 
-(define-private (generate-token-uri (token-id uint)) 
+(define-private (generate-token-uri (token-id uint))
   (concat (var-get base-uri) (concat (int-to-ascii token-id) ".json"))
 )
 
 ;; Public Functions
-(define-public (transfer (token-id uint) (sender principal) (recipient principal))
+(define-public (transfer
+    (token-id uint)
+    (sender principal)
+    (recipient principal)
+  )
   (begin
     (asserts! (var-get transferrable) ERR-NON-TRANSFERRABLE)
-    (asserts! (validate-ownership-or-approval token-id tx-sender) ERR-NOT-TOKEN-OWNER)
+    (asserts! (validate-ownership-or-approval token-id tx-sender)
+      ERR-NOT-TOKEN-OWNER
+    )
     (map-delete nft-approvals token-id)
     (nft-transfer? luxurynfts token-id sender recipient)
   )
 )
 
-(define-public (set-approval (token-id uint) (operator principal))
+(define-public (set-approval
+    (token-id uint)
+    (operator principal)
+  )
   (begin
     (asserts! (validate-ownership token-id tx-sender) ERR-NOT-TOKEN-OWNER)
     (map-set nft-approvals token-id operator)
-    (print {event: "approval-granted", token: token-id, operator: operator})
+    (print {
+      event: "approval-granted",
+      token: token-id,
+      operator: operator,
+    })
     (ok true)
   )
 )
 
-(define-public (claim (cid uint) (verify-id uint) (cap uint) (recipient principal) (signature (buff 65))) 
+(define-public (claim
+    (cid uint)
+    (verify-id uint)
+    (cap uint)
+    (recipient principal)
+    (signature (buff 65))
+  )
   (begin
     (asserts! (is-standard recipient) ERR-INVALID-ADDRESS)
     (asserts! (check-under-cap cid cap) ERR-CAP-REACHED)
-    (asserts! (not (default-to false (map-get? minted-verify-ids verify-id))) ERR-INVALID-SIGNATURE)
-    ;; (asserts! (verify-signature cid verify-id cap recipient signature) ERR-INVALID-SIGNATURE)
-    
-    (let 
-      (
+    (asserts! (not (default-to false (map-get? minted-verify-ids verify-id)))
+      ERR-INVALID-SIGNATURE
+    )
+    (asserts! (verify-signature cid verify-id cap recipient signature)
+      ERR-INVALID-SIGNATURE
+    )
+
+    (let (
         (new-token-id (+ (var-get last-token-id) u1))
         (new-minted-count (+ (get-campaign-minted-count cid) u1))
       )
@@ -135,7 +187,7 @@
         campaign: cid,
         verify: verify-id,
         cap: cap,
-        recipient: recipient
+        recipient: recipient,
       })
       (ok new-token-id)
     )
@@ -149,7 +201,11 @@
     (map-delete nft-approvals token-id)
     (match (nft-burn? luxurynfts token-id tx-sender)
       success (begin
-        (print {event: "nft-burned", token: token-id, burner: tx-sender})
+        (print {
+          event: "nft-burned",
+          token: token-id,
+          burner: tx-sender,
+        })
         (ok true)
       )
       error ERR-CANNOT-BURN
@@ -158,31 +214,40 @@
 )
 
 ;; Admin Functions
-(define-public (set-transferrable (new-state bool)) 
-  (begin 
+(define-public (set-transferrable (new-state bool))
+  (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-OWNER-ONLY)
     (var-set transferrable new-state)
-    (print {event: "transfer-state-changed", enabled: new-state})
+    (print {
+      event: "transfer-state-changed",
+      enabled: new-state,
+    })
     (ok true)
   )
 )
 
-(define-public (set-contract-owner (new-owner principal)) 
-  (begin 
+(define-public (set-contract-owner (new-owner principal))
+  (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-OWNER-ONLY)
     (asserts! (is-standard new-owner) ERR-INVALID-ADDRESS)
     (var-set contract-owner new-owner)
-    (print {event: "owner-changed", new-owner: new-owner})
+    (print {
+      event: "owner-changed",
+      new-owner: new-owner,
+    })
     (ok true)
   )
 )
 
-(define-public (set-signer-key (new-key (buff 33))) 
-  (begin 
+(define-public (set-signer-key (new-key (buff 33)))
+  (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-OWNER-ONLY)
     (asserts! (not (is-eq new-key EMPTY-BUFFER)) ERR-INVALID-SIGNER-KEY)
     (var-set signer-public-key new-key)
-    (print {event: "signer-key-updated", new-key: new-key})
+    (print {
+      event: "signer-key-updated",
+      new-key: new-key,
+    })
     (ok true)
   )
 )
@@ -192,7 +257,10 @@
   (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-OWNER-ONLY)
     (var-set base-uri new-uri)
-    (print {event: "base-uri-updated", new-uri: new-uri})
+    (print {
+      event: "base-uri-updated",
+      new-uri: new-uri,
+    })
     (ok true)
   )
 )
@@ -203,23 +271,21 @@
 )
 
 (define-read-only (get-token-uri (token-id uint))
-  (ok
-    (match (nft-get-owner? luxurynfts token-id)
-      owner (some (generate-token-uri token-id))
-      none
-    )
-  )
+  (ok (match (nft-get-owner? luxurynfts token-id)
+    owner (some (generate-token-uri token-id))
+    none
+  ))
 )
 
-(define-read-only (get-name) 
+(define-read-only (get-name)
   (ok CONTRACT-NAME)
 )
 
-(define-read-only (get-symbol) 
+(define-read-only (get-symbol)
   (ok CONTRACT-SYMBOL)
 )
 
-(define-read-only (is-transferrable) 
+(define-read-only (is-transferrable)
   (ok (var-get transferrable))
 )
 
@@ -234,7 +300,7 @@
   (ok (map-get? nft-approvals token-id))
 )
 
-(define-read-only (get-signer) 
+(define-read-only (get-signer)
   (ok (var-get signer-public-key))
 )
 
@@ -246,11 +312,11 @@
   (ok (get-campaign-minted-count cid))
 )
 
-(define-read-only (is-verify-id-used (verify-id uint)) 
+(define-read-only (is-verify-id-used (verify-id uint))
   (ok (default-to false (map-get? minted-verify-ids verify-id)))
 )
 
-(define-read-only (get-contract-address) 
+(define-read-only (get-contract-address)
   (ok contract-caller)
 )
 

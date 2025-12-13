@@ -1,4 +1,5 @@
 (define-trait nft-trait
+
   (
     ;; Last token ID, limited to uint range
     (get-last-token-id () (response uint uint))

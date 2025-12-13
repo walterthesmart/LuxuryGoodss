@@ -69,15 +69,12 @@
       (concat 
         (concat 
           (concat 
-            (concat 
-              (sha256 chain-id)
-              (as-contract tx-sender)
-            )
-            (sha256 cid) 
+            (sha256 chain-id)
+            (unwrap-panic (to-consensus-buff? contract-caller))
           )
-          (sha256 verify-id)
+          (unwrap-panic (to-consensus-buff? cid))
         )
-        (sha256 cap)
+        (unwrap-panic (to-consensus-buff? verify-id))
       ) 
       (unwrap-panic (to-consensus-buff? owner))
     )
@@ -254,7 +251,7 @@
 )
 
 (define-read-only (get-contract-address) 
-  (ok (as-contract tx-sender))
+  (ok contract-caller)
 )
 
 (define-read-only (get-base-uri)
